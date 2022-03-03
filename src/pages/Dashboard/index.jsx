@@ -1,17 +1,76 @@
-import { useContext, useState } from "react"
+import { useContext, useState, useEffect, cloneElement } from "react"
 import Header from "../../components/Header";
 import { AuthContext } from '../../contexts/auth';
 import Title from '../../components/Title';
 import { FiMessageSquare, FiPlus, FiSearch, FiEdit2 } from 'react-icons/fi'
+import firebase from '../../services/firebaseConnection';
+import { format } from 'date-fns'
 
 import './dashboard.css';
 import { Link } from "react-router-dom";
 
+const listRef = firebase.firestore().collection('chamados').orderBy('created', 'desc')
+
 export default function Dashboard(){
-    const [chamados, setChamados] = useState([1]);
+    const [chamados, setChamados] = useState([]);
+    const [loading, setLoading] =useState(true);
+    const [loadingMore,  setLoadingMore] = useState(false);
+    const [isEmpty, setIsEmpyt] = useState(false);
+    const [lastDocs, setLastDocs] = useState();
+
+    useEffect(() => {
+        loadChamados();
+    }, []);
+
+
+    async function loadChamados() {
+        await listRef.limit(5)
+            .get()
+            .then((snapshot) => {
+                updateState(snapshot)
+            })
+            .catch((err) => {
+                console.log('Erro au fazer a busca de chamados', err);
+                setLoadingMore(false);
+            })
+
+            setLoading(false);
+    }
+
+    async function updateState(snapshot) {
+        const isCollactionEmpty = snapshot.size === 0;
+
+        if(!isCollactionEmpty){
+            let list = [];
+
+            snapshot.forEach((doc) => {
+                list.push({
+                    id: doc.id,
+                    assunto: doc.data().assunto,
+                    cliente: doc.data().cliente,
+                    clienteId: doc.data().clienteId,
+                    created: doc.data().created,
+                    createdFormated: format(doc.data().created.toDate(), 'dd/MM/yyyy'),
+                    status: doc.data().status,
+                    complemento: doc.data().complemento
+                })
+            })
+
+            const lastDoc = snapshot.docs[snapshot.docs.length -1]; //pegando ultimo documento buscado
+            
+            setChamados(chamados => [...chamados], ...list);
+            setLastDocs(lastDoc);
+        }else {
+            setIsEmpyt(true);
+        }
+
+        setLoadingMore(false);
+    }
 
  
     const { signOut } = useContext(AuthContext);
+
+
     return(
         <div>
             <Header/>
