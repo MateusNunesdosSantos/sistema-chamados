@@ -4,7 +4,8 @@ import { AuthContext } from '../../contexts/auth';
 import Title from '../../components/Title';
 import { FiMessageSquare, FiPlus, FiSearch, FiEdit2 } from 'react-icons/fi'
 import firebase from '../../services/firebaseConnection';
-import { format } from 'date-fns'
+import { format } from 'date-fns';
+import Modal from "../../components/Modal";
 
 import './dashboard.css';
 import { Link } from "react-router-dom";
@@ -18,28 +19,34 @@ export default function Dashboard(){
     const [isEmpty, setIsEmpyt] = useState(false);
     const [lastDocs, setLastDocs] = useState();
 
-    const { signOut } = useContext(AuthContext);
+    const [showPostmodal, setShowPostModal] = useState(false);
+    const [detail, setDetail] = useState();
+
+   //const { signOut } = useContext(AuthContext);
 
 
     useEffect(() => {
+        
+        async function loadChamados() {
+            await listRef.limit(5)
+                .get()
+                .then((snapshot) => {
+                    updateState(snapshot)
+                })
+                .catch((err) => {
+                    console.log('Erro au fazer a busca de chamados', err);
+                    setLoadingMore(false);
+                })
+    
+                setLoading(false);
+        }
+    
+
         loadChamados();
     }, []);
 
 
-    async function loadChamados() {
-        await listRef.limit(5)
-            .get()
-            .then((snapshot) => {
-                updateState(snapshot)
-            })
-            .catch((err) => {
-                console.log('Erro au fazer a busca de chamados', err);
-                setLoadingMore(false);
-            })
-
-            setLoading(false);
-    }
-
+ 
     async function updateState(snapshot) {
         const isCollactionEmpty = snapshot.size === 0;
 
@@ -82,7 +89,12 @@ export default function Dashboard(){
         })
     }
 
- 
+    function togglePostModal(item) {
+        setShowPostModal(!showPostmodal);
+        setDetail(item);
+     
+
+    }
 
     if(loading){
         return(
@@ -144,7 +156,7 @@ export default function Dashboard(){
                                     </td>
                                     <td data-label='Cadastrado'>{item.createdFormated}</td>
                                     <td data-label='#'>
-                                        <button className="action" style={{backgroundColor: '#3583f6'}}>
+                                        <button className="action" style={{backgroundColor: '#3583f6'}} onClick={() => togglePostModal(item)}>
                                             <FiSearch color="#FFF" size={17}/> 
                                         </button>
 
@@ -158,13 +170,20 @@ export default function Dashboard(){
                         </tbody>
                     </table>
 
-
                     {loadingMore && <h3 style={{textAlign: 'center', marginTop: 15}}>Buscando dados...</h3>}
                     {!loadingMore && !isEmpty &&
                     <button className="btn-more" onClick={handleMore}>Buscar mais</button>}
                    </> 
                 )}              
-            </div> 
+            </div>
+
+            {showPostmodal && (
+               <Modal 
+                conteudo={detail}
+                close={togglePostModal}
+               />
+            )}
+
         </div>
     )
 }
