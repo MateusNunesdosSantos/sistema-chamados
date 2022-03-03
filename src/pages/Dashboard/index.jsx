@@ -18,6 +18,9 @@ export default function Dashboard(){
     const [isEmpty, setIsEmpyt] = useState(false);
     const [lastDocs, setLastDocs] = useState();
 
+    const { signOut } = useContext(AuthContext);
+
+
     useEffect(() => {
         loadChamados();
     }, []);
@@ -43,7 +46,7 @@ export default function Dashboard(){
         if(!isCollactionEmpty){
             let list = [];
 
-            snapshot.forEach((doc) => {
+            snapshot.forEach((doc)=>{
                 list.push({
                     id: doc.id,
                     assunto: doc.data().assunto,
@@ -58,7 +61,7 @@ export default function Dashboard(){
 
             const lastDoc = snapshot.docs[snapshot.docs.length -1]; //pegando ultimo documento buscado
             
-            setChamados(chamados => [...chamados], ...list);
+            setChamados(chamados => [...chamados, ...list]);
             setLastDocs(lastDoc);
         }else {
             setIsEmpyt(true);
@@ -67,14 +70,40 @@ export default function Dashboard(){
         setLoadingMore(false);
     }
 
- 
-    const { signOut } = useContext(AuthContext);
+    async function handleMore() {
+        setLoadingMore(true);
+        await listRef.startAfter(lastDocs).limit(5)
+        .get()
+        .then((snapshot) => {
+            updateState(snapshot)
+        })
+        .catch((err) => {
+            console.log('Erro ao buscar Mais dados', err)
+        })
+    }
 
+ 
+
+    if(loading){
+        return(
+            <div>
+                <Header/>
+                <div className="content">
+                <Title name='Atendiamentos'>
+                    <FiMessageSquare size={25} />
+                </Title> 
+                <div className="container dashboard">
+                    <span>Buscando chamaodos...</span>
+                </div>
+                </div>
+            </div>
+        )
+    }
 
     return(
         <div>
             <Header/>
-           <div className="content">
+            <div className="content">
                 <Title name='Atendiamentos'>
                     <FiMessageSquare size={25} />
                 </Title> 
@@ -104,25 +133,35 @@ export default function Dashboard(){
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td data-label='cliente'>Escola</td>
-                                <td data-label='Assunto'>Suporte</td>
-                                <td data-label='Status'>
-                                    <span className="badge" style={{backgroundColor: '#5Cb85c'}} >Em Aberto</span>
-                                </td>
-                                <td data-label='Cadastrado'>20/06/2021</td>
-                                <td data-label='#'>
-                                    <button className="action" style={{backgroundColor: '#3583f6'}}>
-                                        <FiSearch color="#FFF" size={17}/> 
-                                    </button>
+                        {chamados.map((item, index) => {
+                            return(       
+                                <tr key={index}>
+                                    <td data-label='cliente'>{item.cliente}</td>
+                                    <td data-label='Assunto'>{item.assunto}</td>
+                                    <td data-label='Status'>
+                                        <span className="badge" 
+                                              style={{backgroundColor: item.status === 'Aberto' ? '#5Cb85c' :  '#999' }} >{item.status}</span>
+                                    </td>
+                                    <td data-label='Cadastrado'>{item.createdFormated}</td>
+                                    <td data-label='#'>
+                                        <button className="action" style={{backgroundColor: '#3583f6'}}>
+                                            <FiSearch color="#FFF" size={17}/> 
+                                        </button>
 
-                                    <button className="action" style={{backgroundColor: '#F6a935'}}>
-                                        <FiEdit2 color="#FFF" size={17}/> 
-                                    </button>
-                                </td>
-                            </tr>
+                                        <button className="action" style={{backgroundColor: '#F6a935'}}>
+                                            <FiEdit2 color="#FFF" size={17}/> 
+                                        </button>
+                                    </td>
+                                </tr>
+                                )
+                            })}
                         </tbody>
-                    </table> 
+                    </table>
+
+
+                    {loadingMore && <h3 style={{textAlign: 'center', marginTop: 15}}>Buscando dados...</h3>}
+                    {!loadingMore && !isEmpty &&
+                    <button className="btn-more" onClick={handleMore}>Buscar mais</button>}
                    </> 
                 )}              
             </div> 
